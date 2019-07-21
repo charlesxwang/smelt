@@ -21,6 +21,10 @@ option(BUILD_TESTING "Enable testing for stochastic module" ON)
 # CMake Modules
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+# Add link library and include directories for MKL and IPP
+find_package(MKL)
+find_package(IPP)
+
 # Set path for external dependencies
 set(JSON_INCLUDE_DIR, ${PROJECT_SOURCE_DIR}/external/nlohmann_json)
 set(CATCH_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/external/catch)
@@ -32,11 +36,7 @@ set(BOOST_INCLUDE_DIR, ${PROJECT_SOURCE_DIR}/external/boost)
 include_directories(${EIGEN_INCLUDE_DIR})
 include_directories(${BOOST_INCLUDE_DIR})
 include_directories(${JSON_INCLUDE_DIR})
-
-# Add link library directories for MKL and IPP
-find_package(MKL)
 include_directories(${MKL_INCLUDE_DIRS})
-find_package(IPP)
 include_directories(${IPP_INCLUDE_DIRS})
 
 # Include directories
@@ -57,12 +57,22 @@ set(SOURCES
   ${PROJECT_SOURCE_DIR}/src/json_object.cc
   ${PROJECT_SOURCE_DIR}/src/vlachos_et_al.cc
   ${PROJECT_SOURCE_DIR}/src/configure.cc
+  ${PROJECT_SOURCE_DIR}/src/wittig_sinha.cc  
   )
 
 # Add library as target
-add_library(lstoc SHARED ${SOURCES})
+# Adding MATH defines for M_PI when building on Windows
+if (WIN32)
+  add_library(smelt STATIC ${SOURCES})    
+  add_compile_definitions(_USE_MATH_DEFINES)
+endif()
+
+if (NOT WIN32)
+  add_library(smelt SHARED ${SOURCES})
+endif()
+
 # Add libraries to link target to
-target_link_libraries(lstoc ${MKL_LIBRARIES} ${IPP_LIBRARIES})
+target_link_libraries(smelt ${MKL_LIBRARIES} ${IPP_LIBRARIES})
 
 # Unit testing
 if (BUILD_TESTING)
@@ -80,10 +90,11 @@ if (BUILD_TESTING)
     ${PROJECT_SOURCE_DIR}/test/filter_func_tests.cc
     ${PROJECT_SOURCE_DIR}/test/json_object_tests.cc
     ${PROJECT_SOURCE_DIR}/test/stochastic_model_tests.cc
+    ${PROJECT_SOURCE_DIR}/test/wind_profile_tests.cc
   )
 
   add_executable(unit_tests ${TEST_SOURCES})
-  target_link_libraries(unit_tests lstoc)
+  target_link_libraries(unit_tests smelt)
   add_test(NAME run_unit_tests COMMAND unit_tests)
   enable_testing()
 endif()  

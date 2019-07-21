@@ -1,35 +1,67 @@
-dist: trusty
-sudo: true
 language:
   - cpp
-compiler:
-  - g++
-
-
 branches:
   only:
     - master
 
-addons:
-  apt:
-    packages:
-      - doxygen
-      - doxygen-doc
-      - doxygen-latex
-      - doxygen-gui
-      - graphviz
-      - cmake
+matrix:
+  fast_finish: true
+  include:
+    - os: osx
+      osx_image: xcode10.2
+      python: 3.4
+      sudo: true
+
+    - os: osx
+      osx_image: xcode10    
+      python: 3.4
+      env:
+        - MATRIX_EVAL="brew install gcc@7 && CC=gcc-7 && CXX=g++-7"
+      
+    - os: linux
+      dist: xenial
+      sudo: true      
+      compiler:
+        - g++      
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - doxygen
+            - doxygen-doc
+            - doxygen-latex
+            - doxygen-gui
+            - graphviz
+            - cmake	  
+            - g++-7
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+
+    - os: linux
+      dist: xenial
+      sudo: true
+      addons:
+        apt:
+          packages:
+            - doxygen
+            - doxygen-doc
+            - doxygen-latex
+            - doxygen-gui
+            - graphviz
+            - cmake	  
+      env:
+        - MATRIX_EVAL="CC=clang && CXX=clang++"
+
+before_install:
+    - eval "${MATRIX_EVAL}"
 
 script:
-  - mkdir build
-  - cd build
-  - cmake ..
-  - make
-  - make test
-  - cd ..
-  - doxygen Doxyfile
+    - chmod +x .travis/build.sh
+    - .travis/build.sh
 
 deploy:
+  if: os = linux
   provider: pages
   skip_cleanup: true
   local_dir: docs/html
